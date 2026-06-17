@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+*.whl
+
+# venv
+.venv/
+venv/
+ENV/
+
+# IDE
+.idea/
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# pyglimmer runtime state
+.pyglimmer_cache/
+
+# Test artifacts
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Sample obfuscated binaries — DO NOT commit real protected code
+samples/*.pyc
+samples/*.py.encrypted

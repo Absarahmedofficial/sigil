@@ -1,0 +1,68 @@
+name: eval
+
+# Runs the obfuscation corpus against the main branch.
+# Gates the merge bar: agents iterate against this; report.json's behavior-preservation
+# score must be >= 0.95 for a release-candidate merge to main.
+#
+# Source: pyglimmer_research/05_ADVERSARIAL_REVIEW.md section 4.6 ("LLM pass correction")
+# and the eval harness shape described in the 24/7 parallel-agent reframe.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Weekly Sunday 02:00 UTC — catches upstream decompiler drift.
+    - cron: "0 2 * * 0"
+
+jobs:
+  eval:
+    name: corpus-eval
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install project + eval extras
+        run: |
+          pip install -e ".[decompilers,llm,test]"
+          pip install pytest
+
+      - name: Start Ollama (for local LLM cleanup eval)
+        # The eval harness defaults to local Ollama. On CI we run it if the
+        # service is reachable; otherwise we skip the LLM-cleanup dimension
+        # and report a partial score.
+        run: |
+          if command -v ollama >/dev/null 2>&1; then
+            ollama serve &
+            sleep 5
+            ollama pull deepseek-coder:6.7b
+            echo "OLLAMA_UP=1" >> $GITHUB_ENV
+          else
+            echo "OLLAMA_UP=0" >> $GITHUB_ENV
+          fi
+
+      - name: Run corpus eval
+        run: |
+          pytest eval/ -v --tb=short --junitxml=eval-report.xml
+          # Emit a CI-readable JSON summary if the harness supports it.
+          if [ -f eval/report.json ]; then
+            echo "Eval report:"
+            cat eval/report.json
+          fi
+
+      - name: Upload eval report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eval-report
+          path: |
+            eval/report.json
+            eval-report.xml
