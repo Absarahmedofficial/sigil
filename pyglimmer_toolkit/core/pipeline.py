@@ -108,29 +108,40 @@ class Pipeline:
     def run(self, on_progress: ProgressCallback) -> PipelineRunResult:
         """Run the single-pillar pipeline.
 
-        Stub. The real implementation will:
-            1. detect() the target kind.
-            2. Build a StripperConfig with target_kind-derived defaults
-               (e.g., skip decompile stage for .py source).
-            3. Construct GenericPythonStripper, call run_pipeline().
-            4. Persist state to `.pyglimmer_cache/<sha>/state.json` after
-               each stage for resumability across crashes.
-            5. Return a populated PipelineRunResult.
+        v1 implementation: detect target kind, construct a
+        GenericPythonStripper with kind-appropriate defaults, run it,
+        wrap the stripper's PipelineResult in a PipelineRunResult.
+
+        For TargetKind.PY_SOURCE, we run the stripper but expect unwrap
+        to recover the source verbatim.  For .pyc, the decompile stage
+        is the bottleneck (depends on whether pycdc is installed).
         """
+        import time
         if not self._target.exists():
             raise FileNotFoundError(f"Target does not exist: {self._target}")
 
         target_hash = sha256_of_file(self._target)
         kind = self.detect()
-        on_progress(0.0, f"STUB: pipeline detected kind={kind.value}")
+        started = time.time()
+
+        # v1 only ships one pillar: the generic Python stripper.
+        # In v2 this is where .NET / PyArmor dispatch will go.
+        from pyglimmer_toolkit.core.generic_python_stripper import (
+            GenericPythonStripper, StripperConfig,
+        )
+        cfg = StripperConfig(
+            target=self._target,
+            out_dir=self._out_dir,
+            allow_dis_fallback=False,  # production posture: no in-process fallback
+        )
+        stripper = GenericPythonStripper(cfg)
+        stripper_result = stripper.run_pipeline(on_progress=on_progress)
 
         return PipelineRunResult(
-            success=False,
+            success=stripper_result.success,
             target_sha256=target_hash,
             target_kind=kind,
-            notes=[
-                "STUB: pipeline.run is a placeholder. "
-                "Implement by wiring up GenericPythonStripper per "
-                "03_FEATURE_FEASIBILITY.md -> Generic Python Stripping Specialist Deep-Dive."
-            ],
+            stripper_result=stripper_result,
+            duration_seconds=time.time() - started,
+            notes=[f"delegated to GenericPythonStripper (v1 single-pillar)"],
         )

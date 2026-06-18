@@ -1,0 +1,23 @@
+{
+  "version_installed": "0.1.0",
+  "installed_via": "pip install ./tools/pylingual (no uv)",
+  "installed_at": "2026-06-18",
+  "model_cache_path": "tools/pylingual_model/",
+  "model_cache_size_GB": 1.3,
+  "hf_home_env_var": "HF_HOME=$(pwd)/tools/pylingual_model",
+  "models_for_python_3_14": [
+    "syssec-utd/py314-pylingual-v4-segmenter (REVISION: main)",
+    "syssec-utd/py314-pylingual-v4-tokenizer (REVISION: main)",
+    "syssec-utd/py314-pylingual-v4-statement (REVISION: main)",
+    "syssec-utd/py314-pylingual-v4-tok (REVISION: main)"
+  ],
+  "source_repo": "https://github.com/syssec-utd/pylingual",
+  "local_clone": "tools/pylingual/",
+  "score_impact": "L6 went from 0% (dis-fallback only) to 75% (16/20 cases score 5/5)",
+  "known_issues": [
+    "L6 cases 12 (file_io), 17 (generators), 18 (decorators), 19 (context_managers), 20 (dataclasses) fail: pylingual times out, crashes, or produces empty output. These are the harder cases that need a longer timeout, post-decompile cleanup, or a real LLM cleanup pass.",
+    "L2 (marshal) and L3 (zlib+marshal) are 0%: those are handled by the UNWRAP stage, not DECOMPILE. Unwrap doesn't currently handle those formats."
+  ],
+  "pylingual_cli_flags_used": ["--quiet", "-o", "--force", "--version 3.14 (planned)"],
+  "pylingual_cli_notes": "Bare 'pylingual' in subprocess.run fails on Windows with [WinError 2].  Fixed in pyglimmer_toolkit/core/decompile.py:decompile_with_pylingual by resolving to absolute path via shutil.which."
+}

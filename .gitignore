@@ -31,3 +31,41 @@ htmlcov/
 # Sample obfuscated binaries — DO NOT commit real protected code
 samples/*.pyc
 samples/*.py.encrypted
+
+# Ad-hoc dev/debug scripts at the repo root (the per-feature playbooks
+# created during pylingual/pycdc investigation).  The real test suite
+# lives under tests/ and IS committed.  These top-level scripts are
+# scratchpads and should not pollute git history.
+test_magic*.py
+test_obfuscation*.py
+test_out_*.py
+test_cfg.py
+test_dis20.py
+test_fail.py
+test_fresh_pyl.py
+test_l2_*.py
+test_patch.py
+test_routing.py
+test_02.py
+check_*.py
+run_*.py
+gen_fixtures_*.py
+dis_test_20/
+pylingual_out/
+pylingual_out_*/
+pylingual_test_q/
+pylingual_l6_test/
+pyl_fail_test/
+test_out_route/
+
+# External decompiler binaries (large; users install separately).
+# We document their expected location in 04_LEGAL_AND_SAFETY.md but
+# do not vendor the binaries into git.
+tools/pycdc/
+tools/python312/
+tools/pylingual_model/
+tools/pylingual_out/
+# pylingual's vendored upstream source (3.1 MB) and HF model files (1.3 GB)
+# live in tools/ for local dev.  Install via `uv tool install pylingual`
+# instead.
+tools/pylingual/

@@ -48,8 +48,13 @@ dependencies = [
 # Decompiler integration (added in 0.1.0)
 # pycdc is a C++ binary; we shell out to it. No Python wheel exists.
 # pylingual is a Python package; we install alongside but never import (subprocess-only).
+#
+# IMPORTANT: pylingual on PyPI is currently at 0.1.0 (verified 2026-06-18).
+# Their PyPI page (https://pypi.org/project/pylingual/) lists 0.1.0 as the
+# current release.  Pinning to >=0.1.0,<0.2.0 is the right call for v0.0.1
+# so we get a usable install.  Bump this floor when pylingual ships 0.2.0+.
 decompilers = [
-    "pylingual>=2.0.0; python_version >= '3.11'",
+    "pylingual>=0.1.0,<0.2.0; python_version >= '3.11'",
 ]
 
 # GUI (added in v1.1, NOT v1)
@@ -93,18 +98,28 @@ test = [
 Homepage = "https://github.com/USER/pyglimmer-stripper"
 Issues = "https://github.com/USER/pyglimmer-stripper/issues"
 
+# IMPORTANT: the on-disk source tree uses the package name `pyglimmer_toolkit`
+# (preserved from the original PyGlimmer project before the v1 cut-scope
+# rename).  We expose the canonical CLI as `sigil` (see cli.py) and let
+# users also invoke via `python -m pyglimmer_toolkit`.  The `pyglimmer`
+# script entry point installs the package's cli:app callable; on import
+# it resolves through the on-disk `pyglimmer_toolkit` package.
+#
+# Do NOT change this to `pyglimmer_stripper.cli:app` unless the source tree
+# is also renamed - the entry point and the on-disk package must agree.
 [project.scripts]
-# Canonical CLI entry point. `pip install pyglimmer-stripper` -> `pyglimmer` on PATH.
-pyglimmer = "pyglimmer_stripper.cli:app"
+sigil = "pyglimmer_toolkit.cli:app"
 
 [tool.hatch.build.targets.wheel]
-# Package source layout. v1 ships the cut-scope package; the v2 .NET and
-# PyArmor pillars are not packaged.
-packages = ["pyglimmer_stripper"]
+# Package source layout.  v1 ships the cut-scope package; the v2 .NET and
+# PyArmor pillars are not packaged.  The on-disk package directory is
+# `pyglimmer_toolkit/` (preserved from the original PyGlimmer project),
+# not the renamed PyPI name `pyglimmer-stripper`.
+packages = ["pyglimmer_toolkit"]
 
 [tool.hatch.build.targets.wheel.shared-data]
 # Config templates (LLM cleanup prompt, default detection rules) bundled as data.
-"pyglimmer_stripper/data" = "pyglimmer_stripper/data"
+"pyglimmer_toolkit/data" = "pyglimmer_toolkit/data"
 
 [tool.ruff]
 line-length = 100
@@ -135,7 +150,8 @@ testpaths = ["tests"]
 pythonpath = ["."]
 
 [tool.coverage.run]
-source = ["pyglimmer_stripper"]
+# Match the on-disk package directory (not the renamed PyPI name).
+source = ["pyglimmer_toolkit"]
 branch = true
 
 [tool.coverage.report]
