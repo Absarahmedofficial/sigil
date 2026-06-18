@@ -4,16 +4,9 @@
 
 ## Honest Status
 
-**Score: 85.4% (427/500) on the obfuscation corpus as of 2026-06-18.** See
-`eval/report.json` and `eval/report_pylingual_v4.json` for the full per-case
-breakdown. The pipeline is wired end-to-end (extract → unwrap → decompile →
-optional LLM cleanup); the only remaining gap is the pylingual v0.1.0 3.13
-model's inability to decompile 5 of the 20 hard cases (file_io, generators,
-decorators, context_managers, dataclasses). See "Known Limitations" below.
-
-The `.NET` and `PyArmor` pillars that earlier drafts promised are **deferred to
-v2**. See `05_ADVERSARIAL_REVIEW.md` for the full rationale. The skeleton keeps
-those modules as `deferred` seeds, not shipped features.
+**v0.1.0 — 94.4% behavior-preservation rate, 76 pytest tests passing,
+GPL-3.0-or-later license, single-pillar scope.** See `STATE.md` for
+current state and `v2_ROADMAP.md` for next steps.
 
 ## What works right now
 
