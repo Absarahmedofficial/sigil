@@ -223,9 +223,42 @@ pass.
   audit means future PRs don't get polluted by vendored binaries
   or historical eval reports, and the eval bench is wired to
   report the score with the xfail denominator exclusion.
-  The one outstanding item is the eval-bench score delta, which
-  will land as a comment on the PR once the background run
-  finishes (estimated ~07:00 PST, ~30 min from now).  If the
-  delta is negative, the only action is reverting Task 5 (the
-  hypothesis test) which is a no-op for production code.
+
+**Eval-bench status (important caveat):** the full
+`--pylingual-model-path tools/pylingual_model` run did not
+finish within the overnight window.  Empirically that run
+takes ~48 minutes (2888s in the v0.1.0 baseline report) —
+the 50-trial L2/L3/L6 cases are dominated by pylingual
+inference time, not the stripper itself.  I started it in
+the background after Task 5, but it had not emitted its
+first line of output before the 6-hour budget elapsed.  I
+then killed it and ran a *fast* eval (no pylingual, just
+dis-fallback) to confirm the new xfail code path is correct
+end-to-end — the per-case output now shows
+`17_generators.py ... [xfail]` and `20_dataclasses.py ... [xfail]`
+on every layer, and the xfail cases are excluded from the
+denominator (450 = 18 cases x 5 layers x 5 trials, not 500).
+
+The xfail logic is wired correctly.  A full comparable eval
+that uses pylingual and runs the same 500 trials will need
+~50 minutes on this hardware.  That should be re-run after
+the merge so the PR description and STATE.md can quote the
+new score (which will be **strictly higher** than 94.4%
+because 2 of the previously-failing cases are now excluded
+from the denominator, not because we got smarter — that's
+the whole point of P2-7).
+
+**Action for LO when she wakes up:**
+  1. Pull `overnight/v0.0.1.dev1-cleanup`
+  2. Re-run the eval: `python -m eval.run_eval --skip-obfuscate
+     --pylingual-model-path tools/pylingual_model` (~50 min)
+  3. Update STATE.md and the PR description with the new score
+  4. Merge PR https://github.com/Absarahmedofficial/sigil/pull/1
+     once happy with the eval
+
+**Nothing is blocked on the missing eval.**  All 4 P2 bugs
+are closed, all tests pass, the .gitignore audit is in, the
+xfail logic is wired, the version is bumped, the CHANGELOG
+exists.  The eval is the only outstanding item and it's a
+~50-minute re-run, not a code change.
 
