@@ -21,6 +21,8 @@ import marshal
 import pathlib
 
 import pytest
+from hypothesis import HealthCheck, given, settings
+from hypothesis import strategies as st
 
 from pyglimmer_toolkit.core import unwrap as unwrap_mod
 from pyglimmer_toolkit.core.unwrap import unwrap_iter, unwrap_once, code_object_from_marker
@@ -211,3 +213,67 @@ def test_code_object_marker_roundtrip() -> None:
     ns: dict = {}
     exec(recovered, ns)
     assert ns["x"] == 3
+
+
+# ---------------------------------------------------------------------------
+# P2-5: unwrap_iter is idempotent (property test via hypothesis)
+# ---------------------------------------------------------------------------
+#
+# unwrap_iter converges on a fixed point: applying it twice should give
+# the same result as applying it once.  This is a property that
+# property-based testing catches cleanly across the L1/L2/L3/L5 fixture
+# set.  We also assert that the L2/L3 markers (when present) are
+# preserved through a no-op unwrap_iter pass — the marker line is
+# part of the "text" the next stage consumes.
+
+
+# Hypothesis can't sample a list of strings built inside a test, so we
+# wrap the list in a custom strategy: build the strategy from the
+# fixture paths that pytest has resolved.
+def _obfuscated_text_strategy(l1, l2, l3, l5):
+    return st.sampled_from([
+        l1.read_text(encoding="utf-8"),
+        l2.read_text(encoding="utf-8"),
+        l3.read_text(encoding="utf-8"),
+        l5.read_text(encoding="utf-8"),
+    ])
+
+
+@given(obfuscated_text=st.data())
+@settings(
+    max_examples=50,
+    deadline=None,
+    suppress_health_check=[HealthCheck.function_scoped_fixture],
+)
+def test_unwrap_iter_is_idempotent_on_obfuscated_fixtures(
+    obfuscated_text,
+    l1_base64_py: pathlib.Path,
+    l2_marshal_marker: pathlib.Path,
+    l3_zlib_marshal_py: pathlib.Path,
+    l5_lambda_wall_py: pathlib.Path,
+) -> None:
+    """P2-5: unwrap_iter(unwrap_iter(x)) == unwrap_iter(x) for all L1/L2/L3/L5
+    fixtures.  This catches the bug where a non-idempotent layer peels
+    halfway on the first call and fully on the second — that would
+    let stale state leak between pipeline runs.
+
+    hypothesis draws one of the 4 fixture texts at random per example
+    (50 examples total), and asserts that a second unwrap_iter call
+    is a no-op on the first call's output.
+    """
+    text = obfuscated_text.draw(
+        _obfuscated_text_strategy(
+            l1_base64_py, l2_marshal_marker, l3_zlib_marshal_py, l5_lambda_wall_py
+        )
+    )
+    notes1: list[str] = []
+    once = unwrap_iter(text, notes1)
+    notes2: list[str] = []
+    twice = unwrap_iter(once, notes2)
+    assert once == twice, (
+        f"unwrap_iter not idempotent on fixture (len {len(text)}):\n"
+        f"  once  = {once!r}\n"
+        f"  twice = {twice!r}\n"
+        f"  notes1 = {notes1!r}\n"
+        f"  notes2 = {notes2!r}"
+    )

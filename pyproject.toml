@@ -8,7 +8,7 @@ build-backend = "hatchling.build"
 # Renaming the PyPI package now (rather than at v1.0.0) keeps the public
 # surface honest with the project's actual scope.
 name = "pyglimmer-stripper"
-version = "0.0.1.dev0"
+version = "0.0.1.dev1"
 description = "Generic Python obfuscation stripper with optional LLM cleanup. Extracts, unwraps, decompiles, and cleans .pyc / PyInstaller-bundled .py."
 readme = "README.md"
 requires-python = ">=3.11"

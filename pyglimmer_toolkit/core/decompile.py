@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import dis
 import importlib.util
+import logging
 import marshal
 import opcode
 import os
@@ -30,6 +31,8 @@ import sys
 import textwrap
 from pathlib import Path
 from typing import Optional
+
+logger = logging.getLogger(__name__)
 
 
 # Magic numbers for Python 3.6-3.14.  Source: CPython's Lib/importlib/_bootstrap_external.py.
@@ -538,11 +541,11 @@ def decompile_file(
 
     def _try_pylingual():
         if pylingual_cmd is None:
-            print("DEBUG: pylingual_cmd is None!")
+            logger.debug("pylingual_cmd is None!")
             return None
-        print(f"DEBUG: trying pylingual with cmd={pylingual_cmd}")
+        logger.debug("trying pylingual with cmd=%s", pylingual_cmd)
         ok, msg = decompile_with_pylingual(pyc_path, out_path, pylingual_cmd)
-        print(f"DEBUG: pylingual result ok={ok} msg={msg[:200]}")
+        logger.debug("pylingual result ok=%s msg=%s", ok, msg[:200])
         return (out_path, "pylingual", python_version) if ok else None
 
     result = None
@@ -550,7 +553,7 @@ def decompile_file(
         result = _try_pycdc() or _try_pylingual()
     elif minor >= 11:
         result = _try_pylingual() or _try_pycdc()
-    print(f"DEBUG: routing result={result}")
+    logger.debug("routing result=%s", result)
 
     if result is not None:
         return result
