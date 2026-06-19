@@ -217,3 +217,104 @@ def test_pipeline_result_with_cleanup() -> None:
     )
     assert result.cleanup is cleanup
     assert result.cleanup.model == "heuristic"
+
+
+# ---------------------------------------------------------------------------
+# P2-1: PipelineResult.success is derived from the stage results
+# ---------------------------------------------------------------------------
+
+def test_pipeline_success_propagates(monkeypatch, tmp_path, hello_py):
+    """run_pipeline on a successful run produces success=True (P2-1 fix).
+
+    We monkey-patch the four stage methods to return success results
+    so we can exercise the success-aggregation logic in run_pipeline
+    without needing pycdc / pylingual / Ollama installed.
+    """
+    from pyglimmer_toolkit.core.generic_python_stripper import (
+        GenericPythonStripper, StripperConfig,
+    )
+
+    cfg = StripperConfig(target=hello_py, out_dir=tmp_path / "out")
+    stripper = GenericPythonStripper(cfg)
+
+    monkeypatch.setattr(stripper, "extract", lambda: ExtractResult(success=True, notes=["ok"]))
+    monkeypatch.setattr(stripper, "unwrap", lambda r: UnwrapResult(success=True, iterations=0, notes=["ok"]))
+    monkeypatch.setattr(stripper, "decompile", lambda r: DecompileResult(
+        success=True, decompiler_used="dis-fallback", notes=["ok"]))
+    # llm_backend is None by default; cleanup_result is None.
+
+    result = stripper.run_pipeline(on_progress=lambda *a: None)
+    assert isinstance(result, PipelineResult)
+    assert result.success is True
+
+
+def test_pipeline_success_false_when_decompile_fails(monkeypatch, tmp_path, hello_py):
+    """If decompile fails, PipelineResult.success is False even with extract+unwrap green."""
+    from pyglimmer_toolkit.core.generic_python_stripper import (
+        GenericPythonStripper, StripperConfig,
+    )
+
+    cfg = StripperConfig(target=hello_py, out_dir=tmp_path / "out")
+    stripper = GenericPythonStripper(cfg)
+
+    monkeypatch.setattr(stripper, "extract", lambda: ExtractResult(success=True, notes=["ok"]))
+    monkeypatch.setattr(stripper, "unwrap", lambda r: UnwrapResult(success=True, iterations=0, notes=["ok"]))
+    monkeypatch.setattr(stripper, "decompile", lambda r: DecompileResult(
+        success=False, decompiler_used="none", notes=["nope"]))
+
+    result = stripper.run_pipeline(on_progress=lambda *a: None)
+    assert result.success is False
+
+
+def test_aggregate_success_with_cleanup_failure():
+    """_aggregate_success returns False when cleanup is provided but failed.
+
+    This is the case where the LLM cleanup ran (e.g. via Ollama) but the
+    semantic-diff guard rejected the model's output.  The original
+    decompiled source is preserved on disk, but the stage itself is
+    considered failed because the cleanup pass didn't improve anything.
+    """
+    from pyglimmer_toolkit.core.generic_python_stripper import _aggregate_success
+
+    extract = ExtractResult(success=True)
+    unwrap = UnwrapResult(success=True)
+    decompile = DecompileResult(success=True, decompiler_used="pylingual")
+    cleanup_failed = CleanupResult(success=False, model="ollama", tokens_used=42)
+
+    assert _aggregate_success(extract, unwrap, decompile, cleanup_failed) is False
+
+
+def test_aggregate_success_with_cleanup_none_is_ok():
+    """_aggregate_success returns True when cleanup is None (no LLM backend).
+
+    A run with no LLM backend is still a success if the first three
+    stages succeeded.  cleanup=None is "stage skipped", not "stage failed".
+    """
+    from pyglimmer_toolkit.core.generic_python_stripper import _aggregate_success
+
+    extract = ExtractResult(success=True)
+    unwrap = UnwrapResult(success=True)
+    decompile = DecompileResult(success=True, decompiler_used="dis-fallback")
+
+    assert _aggregate_success(extract, unwrap, decompile, None) is True
+
+
+# ---------------------------------------------------------------------------
+# P2-7: mark the pylingual 3.14 dataclass regression as expected-to-fail
+# ---------------------------------------------------------------------------
+
+@pytest.mark.xfail(
+    reason="pylingual v0.1.0 3.14 dataclass bug; tracked in 09_OPEN_QUESTIONS / v2_ROADMAP.md Path 3",
+    strict=False,
+)
+def test_dataclass_case_is_known_xfail():
+    """The pylingual v0.1.0 dataclass bug makes case 20_dataclasses.py
+    fail across L2, L3, and L6.  Marked xfail so the test suite stays
+    honest about the regression.
+
+    This test deliberately doesn't call into the stripper; it's a
+    marker test that exists so the xfail is visible in pytest output.
+    """
+    from eval.run_eval import XFAIL_CASES  # type: ignore
+    assert "20_dataclasses.py" in XFAIL_CASES
+    assert "17_generators.py" in XFAIL_CASES

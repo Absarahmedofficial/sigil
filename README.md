@@ -4,9 +4,10 @@
 
 ## Honest Status
 
-**v0.1.0 — 94.4% behavior-preservation rate, 76 pytest tests passing,
-GPL-3.0-or-later license, single-pillar scope.** See `STATE.md` for
-current state and `v2_ROADMAP.md` for next steps.
+**v0.0.1.dev1 — 94.4% behavior-preservation rate (2 cases
+marked xfail), 76+ pytest tests passing**, GPL-3.0-or-later
+license, single-pillar scope.  See `STATE.md` for current state
+and `v2_ROADMAP.md` for next steps.
 
 ## What works right now
 

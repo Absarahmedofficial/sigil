@@ -367,6 +367,7 @@ class GenericPythonStripper:
             notes=[message, f"  cleaned path: {cleaned_path}", f"  changed: {changed}"],
         )
 
+
     def run_pipeline(self, on_progress: ProgressCallback) -> PipelineResult:
         """Top-level: run EXTRACT -> UNWRAP -> DECOMPILE -> (optional) LLM_CLEANUP.
 
@@ -399,10 +400,32 @@ class GenericPythonStripper:
             on_progress(1.0, "STUB: llm_cleanup done")
 
         return PipelineResult(
-            success=False,
+            success=_aggregate_success(extract_result, unwrap_result, decompile_result, cleanup_result),
             target_sha256=target_hash,
             extract=extract_result,
             unwrap=unwrap_result,
             decompile=decompile_result,
             cleanup=cleanup_result,
         )
+
+
+def _aggregate_success(
+    extract: ExtractResult,
+    unwrap: UnwrapResult,
+    decompile: DecompileResult,
+    cleanup: Optional[CleanupResult],
+) -> bool:
+    """Compute PipelineResult.success from the four stage results.
+
+    A stage is "required" if it always runs (extract, unwrap, decompile).
+    A stage is "optional" if it only runs when llm_backend is configured
+    (cleanup).  Optional stages returning None are treated as "skipped",
+    not "failed" — a run with no LLM backend is still a successful run
+    if the first three stages succeeded.
+    """
+    required = [extract, unwrap, decompile]
+    if not all(r.success for r in required):
+        return False
+    if cleanup is not None and not cleanup.success:
+        return False
+    return True

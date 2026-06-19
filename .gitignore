@@ -9,6 +9,7 @@ dist/
 
 # venv
 .venv/
+.venv*/
 venv/
 ENV/
 
@@ -69,3 +70,9 @@ tools/pylingual_out/
 # live in tools/ for local dev.  Install via `uv tool install pylingual`
 # instead.
 tools/pylingual/
+# Local pylingual metadata files (informational; not for the repo)
+tools/pylingual-info*
+tools/pylingual_info*
+
+# Eval reports (historical scores are useful locally, noisy in PRs)
+eval/report_*.json
